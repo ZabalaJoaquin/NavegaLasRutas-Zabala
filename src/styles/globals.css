@@ -2,7 +2,7 @@
 :root{
   --bg:#0b0b0c;
   --card:#121215;
-  --text:#f5f6f7;
+  --text:#d0d5da;
   --muted:#b8bcc7;
   --primary:#c0a061;
   --accent:#c0a061;
@@ -23,8 +23,8 @@ body{
 .navbar{
   position:sticky;top:0;z-index:20;
   backdrop-filter:blur(8px);
-  background:rgba(11,11,12,.6);
-  border-bottom:1px solid #222;
+  background:rgba(42, 42, 104, 0.6);
+  border-bottom:1px solid #3a3333;
 }
 .nav-inner{
   display:flex;align-items:center;justify-content:space-between;gap:1rem;

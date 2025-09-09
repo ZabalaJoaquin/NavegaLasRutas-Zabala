@@ -4,6 +4,7 @@ export default function ProductsSection({
   id = "productos",
   vinos = [],
   champagnes = [],
+  gaseosas = [],
   onAddToCart = () => {},
 }) {
   return (
@@ -32,6 +33,16 @@ export default function ProductsSection({
           ))}
         </div>
       </div>
+      <div className="section-block" id="gaseosas">
+        <h3 className="block-title">Gaseosa Agua Baggio</h3>
+        <div className="grid">
+          {gaseosas.length === 0 && <p className="muted">Subí imágenes a <code>src/assets/gaseosas</code>.</p>}
+          {gaseosas.map((item) => (
+            <ProductCard key={item.id} {...item} onAdd={onAddToCart} />
+          ))}
+        </div>
+      </div>
+
     </section>
   );
 }
