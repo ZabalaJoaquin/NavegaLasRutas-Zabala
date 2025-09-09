@@ -3,6 +3,7 @@ export default function CartWidget({ count = 0 }) {
     <a href="/cart" className="cart" aria-label="Carrito">
       <span className="cart-icon" role="img" aria-label="carrito">🛒</span>
       {count > 0 && (
+        //Solo suma el badge si hay items en el carrito
         <span className="cart-badge" aria-label={`${count} items`}>
           {count}
         </span>

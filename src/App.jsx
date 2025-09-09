@@ -3,7 +3,6 @@ import NavBar from "./components/NavBar.jsx";
 import ItemListContainer from "./components/ItemListContainer.jsx";
 import ProductsSection from "./components/ProductsSection.jsx";
 
-/** Helpers */
 function prettyNameFromPath(path) {
   const file = path.split("/").pop() || "";
   const base = file.replace(/\.[a-z0-9]+$/i, "");
@@ -22,11 +21,11 @@ function buildItemsFromGlob(globObj, precioFijo = null) {
   }));
 }
 
-/** Carga automática de imágenes (usa tu estructura) */
+/*Import imagenes */
 const vinosImgs = import.meta.glob("./assets/vinos/*.{png,jpg,jpeg,webp,avif}", { eager: true });
 const champagneImgs = import.meta.glob("./assets/champagne/*.{png,jpg,jpeg,webp,avif}", { eager: true });
 
-/** Precios por categoría */
+/*Precios que dependen de la categoria / vinos / champagne */
 const vinos = buildItemsFromGlob(vinosImgs, 3500);
 const champagnes = buildItemsFromGlob(champagneImgs, 5000);
 
@@ -34,11 +33,13 @@ export default function App() {
   const [cartCount, setCartCount] = useState(0);
   const handleAddToCart = () => setCartCount((n) => n + 1);
 
+/*Titulo del itemlistcontainter */
   return (
     <>
       <NavBar cartCount={cartCount} />
       <main className="container">
-        <ItemListContainer greeting="¡Bienvenido/a a DISTRIMAX! Venta y distribución de bebidas para negocios y mayoristas." />
+        <ItemListContainer greeting="¡Bienvenid@ a DISTRIMAX!
+        Venta y distribución de bebidas para negocios y mayoristas." />
         <ProductsSection
           id="productos"
           vinos={vinos}

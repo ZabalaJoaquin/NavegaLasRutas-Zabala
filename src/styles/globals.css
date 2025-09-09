@@ -4,7 +4,7 @@
   --card:#121215;
   --text:#f5f6f7;
   --muted:#b8bcc7;
-  --primary:#c0a061; /* dorado Distrimax */
+  --primary:#c0a061;
   --accent:#c0a061;
 }
 *{box-sizing:border-box}
@@ -85,15 +85,3 @@ body{
 }
 .btn-primary:hover{border-color:#333;filter:brightness(1.05)}
 .muted{color:var(--muted)}
-
-/* ====== Responsive ====== */
-@media (max-width: 980px){ .grid{grid-template-columns:repeat(2, minmax(0,1fr))} }
-@media (max-width: 640px){
-  .nav-toggle{display:inline-flex}
-  .nav-links{
-    display:none;position:absolute;top:58px;left:0;right:0;padding:.75rem 1rem;
-    background:rgba(11,11,12,.95);border-bottom:1px solid #222;
-  }
-  .nav-links.is-open{display:grid;grid-auto-rows:min-content;gap:.5rem}
-  .grid{grid-template-columns:1fr}
-}

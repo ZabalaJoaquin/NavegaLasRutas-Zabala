@@ -6,6 +6,7 @@ import logo from "../logos/logo sin fondo 1.png";
 export default function NavBar({ cartCount = 0 }) {
   const [open, setOpen] = useState(false);
 
+/*Menu de navegación */
   return (
     <header className="navbar">
       <div className="nav-inner">
@@ -15,16 +16,7 @@ export default function NavBar({ cartCount = 0 }) {
           </span>
           <span className="brand-name">DISTRIMAX</span>
         </a>
-
-        <button
-          className="nav-toggle"
-          aria-expanded={open}
-          aria-label="Abrir menú"
-          onClick={() => setOpen(!open)}
-        >
-          ☰
-        </button>
-
+      {/*Informacion de la navbar */} 
         <nav className={`nav-links ${open ? "is-open" : ""}`}>
           {NAV_LINKS.map((link) =>
             link.external ? (
@@ -38,7 +30,7 @@ export default function NavBar({ cartCount = 0 }) {
             )
           )}
         </nav>
-
+      {/* CartWidget */}
         <CartWidget count={cartCount} />
       </div>
     </header>

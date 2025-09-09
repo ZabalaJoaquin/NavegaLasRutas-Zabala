@@ -1,4 +1,5 @@
 export default function ProductCard({ nombre, precio, img, onAdd }) {
+//Cartas de productos / Agregar al carrito / Precio / Imagen / Nombre / 
   return (
     <article className="card">
       <div className="card-media">

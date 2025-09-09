@@ -10,7 +10,7 @@ export default function ProductsSection({
     <section id={id} className="section">
       <h2 className="section-title">Productos</h2>
       <p className="section-subtitle">
-        Selección destacada de nuestro catálogo. Pedidos para comercios y mayoristas.
+        Selección destacada de nuestro catálogo.Pedidos para comercios y mayoristas.
       </p>
 
       <div className="section-block" id="vinos">
