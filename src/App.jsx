@@ -24,10 +24,12 @@ function buildItemsFromGlob(globObj, precioFijo = null) {
 /*Import imagenes */
 const vinosImgs = import.meta.glob("./assets/vinos/*.{png,jpg,jpeg,webp,avif}", { eager: true });
 const champagneImgs = import.meta.glob("./assets/champagne/*.{png,jpg,jpeg,webp,avif}", { eager: true });
+const gaseosasImgs = import.meta.glob("./assets/gaseosas/*.{png,jpg,jpeg,webp,avif}", { eager: true });
 
 /*Precios que dependen de la categoria / vinos / champagne */
-const vinos = buildItemsFromGlob(vinosImgs, 3500);
-const champagnes = buildItemsFromGlob(champagneImgs, 5000);
+const vinos = buildItemsFromGlob(vinosImgs, 5000);
+const champagnes = buildItemsFromGlob(champagneImgs, 15000);
+const gaseosas = buildItemsFromGlob(gaseosasImgs, 2000);
 
 export default function App() {
   const [cartCount, setCartCount] = useState(0);
@@ -38,12 +40,13 @@ export default function App() {
     <>
       <NavBar cartCount={cartCount} />
       <main className="container">
-        <ItemListContainer greeting="¡Bienvenid@ a DISTRIMAX!
+        <ItemListContainer greeting="¡Bienvenid@ <USUARIO> a DISTRIMAX!
         Venta y distribución de bebidas para negocios y mayoristas." />
         <ProductsSection
           id="productos"
           vinos={vinos}
           champagnes={champagnes}
+          gaseosas={gaseosas}
           onAddToCart={handleAddToCart}
         />
       </main>
