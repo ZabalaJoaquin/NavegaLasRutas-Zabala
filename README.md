@@ -10,13 +10,9 @@
   <img alt="CSS3" src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=fff" />
 </p>
 
-# Distrimax — e-commerce → portal B2B
+# Distrimax — Catálogo y pedidos para clientes
 
-**Objetivo:** arrancar como e-commerce público y evolucionar a **portal B2B** con **usuario y contraseña** para que comercios/proveedores autogestionen productos, precios y pedidos.
+**Idea:** Los clientes de **Distrimax** ingresan, ven **todos los productos**, los **agregan al carrito** y al confirmar **el pedido le llega a Distrimax** para preparación y entrega.
 
-**Estado (v0):**
-- NavBar + CartWidget (contador).
-- Sección **Productos**: **Vinos** y **Champagne**.
-- Carga automática de imágenes por carpeta.
-- Precios demo: **Vinos $3.500** / **Champagne $5.000**.
-- Instagram: https://www.instagram.com/distrimax_sa
+- **Ahora (MVP):** catálogo público + carrito.
+- **Próximo paso:** portal **B2B** con **usuario y contraseña** (solo comercios/proveedores) para autogestionar productos, precios y pedidos.
