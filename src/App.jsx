@@ -1,6 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
 import NavBar from "./components/NavBar.jsx";
-import ItemListContainer from "./components/ItemListContainer.jsx";
+import { Routes, Route } from "react-router-dom";
+import ItemListContainer from "./containers/ItemListContainer.jsx";
+import ItemDetailContainer from "./containers/ItemDetailContainer.jsx";
+import NotFound from "./components/NotFound.jsx";
 import ProductsSection from "./components/ProductsSection.jsx";
 import { PRODUCTS } from "./data/products.js";
 
@@ -141,16 +144,35 @@ export default function App() {
   return (
     <>
       <NavBar cartCount={cartCount} />
+      
       <main className="container">
-        <ItemListContainer greeting="¡Bienvenido/a a DISTRIMAX! Venta y distribución de bebidas para negocios y mayoristas." />
-        <ProductsSection
-          id="productos"
-          vinos={vinos}
-          champagnes={champagnes}
-          aguas={aguas}
-          onAddToCart={handleAddToCart}
+        <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <section className="section">
+                <h2 className="section-title">
+                  ¡Bienvenido/a a DISTRIMAX! Venta y distribución de bebidas para negocios y mayoristas.
+                </h2>
+              </section>
+
+              <ProductsSection
+                id="productos"
+                vinos={vinos}
+                champagnes={champagnes}
+                aguas={aguas}
+                onAddToCart={handleAddToCart}
+              />
+            </>
+          }
         />
+          <Route path="/category/:categoryId" element={<ItemListContainer />} />
+          <Route path="/item/:id" element={<ItemDetailContainer onAddToCart={handleAddToCart} />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
+
     </>
   );
 }
