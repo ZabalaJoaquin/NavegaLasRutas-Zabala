@@ -1,5 +1,4 @@
-// src/lib/api.js
-// API simple: Promises + delay, lee PRODUCTS y resuelve imágenes desde src/assets.
+// API simple: Lee PRODUCTS y resuelve imágenes desde src/assets.
 // Incluye 'desc' para el detalle y un buscador de imágenes con fallback.
 
 import { PRODUCTS } from "../data/products.js";
@@ -14,7 +13,7 @@ const imageMaps = {
 
 const base = (p) => (p.split("/").pop() || "");
 
-// Normaliza: sin acentos, minúsculas, espacios colapsados
+// Sin acentos, minúsculas, espacios colapsados
 const norm = (s = "") =>
   s
     .normalize("NFD")
@@ -28,13 +27,12 @@ const ALLOWED = ["vinos", "champagne", "aguas"];
 function tryIn(map, fileName) {
   const target = norm(fileName);
   for (const [path, mod] of Object.entries(map || {})) {
-    if (norm(base(path)) === target) return mod.default; // URL servida por Vite
+    if (norm(base(path)) === target) return mod.default;
   }
   return null;
 }
 
 function resolveImg(category, fileName) {
-  // 1) Intento en la carpeta de la categoría (si es válida)
   const catOk = ALLOWED.includes(category) ? category : null;
   if (catOk) {
     const hit = tryIn(imageMaps[catOk], fileName);
@@ -45,13 +43,10 @@ function resolveImg(category, fileName) {
     const hit = tryIn(imageMaps[key], fileName);
     if (hit) return hit;
   }
-  // Opcional para debugear:
-  // console.warn(`[IMG] No se encontró "${fileName}" en assets (cat=${category})`);
   return null;
 }
 
 export async function getCategories() {
-  // categorías únicas válidas (ordenadas)
   const cats = Array.from(
     new Set(
       (PRODUCTS || []).map((p) =>
