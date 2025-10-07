@@ -6,6 +6,7 @@ import ItemDetailContainer from "./containers/ItemDetailContainer.jsx";
 import NotFound from "./components/NotFound.jsx";
 import ProductsSection from "./components/ProductsSection.jsx";
 import { PRODUCTS } from "./data/products.js";
+import { getItems } from "./firebase.js";
 
 /* ===== Reglas de IDs (tu criterio) ===== */
 const MIN_ID = { aguas: 10000, champagne: 2000, vinos: 3000 };
@@ -105,6 +106,7 @@ export default function App() {
   /* ===== Validaciones en desarrollo ===== */
   useEffect(() => {
     if (!import.meta.env.DEV) return;
+    getItems();
 
     // Mostrar qué archivos detectó Vite en cada carpeta
     const keys = (m) => Object.keys(m).map((p) => p.split("/").pop());
