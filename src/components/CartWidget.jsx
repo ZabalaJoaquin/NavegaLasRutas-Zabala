@@ -1,13 +1,12 @@
-export default function CartWidget({ count = 0 }) {
+import { Link } from 'react-router-dom'
+import { useCart } from '../context/CartContext.jsx'
+
+export default function CartWidget(){
+  const { count } = useCart()
   return (
-    <a href="/cart" className="cart" aria-label="Carrito">
-      <span className="cart-icon" role="img" aria-label="carrito">🛒</span>
-      {count > 0 && (
-        //Solo suma el badge si hay items en el carrito
-        <span className="cart-badge" aria-label={`${count} items`}>
-          {count}
-        </span>
-      )}
-    </a>
-  );
+    <Link to="/carrito" className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-soft border border-surface-hard">
+      <span className="i">🛒</span>
+      <span className="text-sm">{count}</span>
+    </Link>
+  )
 }

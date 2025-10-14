@@ -1,0 +1,51 @@
+[
+  {
+    "id": "vino-malbec-norton",
+    "name": "Vino Malbec Norton 750ml",
+    "price": 5200,
+    "category": "Vinos",
+    "img": "/prod/vino.svg"
+  },
+  {
+    "id": "champagne-chandon-brut",
+    "name": "Champagne Chandon Brut 750ml",
+    "price": 11500,
+    "category": "Champagne",
+    "img": "/prod/vino.svg"
+  },
+  {
+    "id": "fernet-branca-750",
+    "name": "Fernet Branca 750ml",
+    "price": 9800,
+    "category": "Fernet",
+    "img": "/prod/vino.svg"
+  },
+  {
+    "id": "energizante-speed-500",
+    "name": "Speed 500ml",
+    "price": 2100,
+    "category": "Energizantes",
+    "img": "/prod/speed.svg"
+  },
+  {
+    "id": "cerveza-quilmes-lata",
+    "name": "Cerveza Quilmes Lata 473ml",
+    "price": 2200,
+    "category": "Cervezas",
+    "img": "/prod/quilmes.svg"
+  },
+  {
+    "id": "gaseosa-coca-15",
+    "name": "Coca‑Cola 1.5L",
+    "price": 2900,
+    "category": "Gaseosas",
+    "img": "/prod/coca.svg"
+  },
+  {
+    "id": "agua-villavicencio-2",
+    "name": "Agua Villavicencio 2L",
+    "price": 1800,
+    "category": "Aguas",
+    "img": "/prod/agua.svg"
+  }
+]

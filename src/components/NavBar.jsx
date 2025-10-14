@@ -1,56 +1,39 @@
-import { useState, useEffect } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { NAV_LINKS } from "../lib/routes.js";
-import CartWidget from "./CartWidget.jsx";
-import { getCategories } from "../lib/api.js";
-import logo from "../logos/logo sin fondo 1.png";
+import { NavLink, Link } from 'react-router-dom'
+import logo from '../assets/logo-transparente.png'
+import CartWidget from './CartWidget.jsx'
+// Alias para evitar el choque “Identifier 'useAuth' has already been declared”
+import { useAuth as useAuthCtx } from '../auth/AuthContext.jsx'
 
-export default function NavBar({ cartCount = 0 }) {
-  const [open, setOpen] = useState(false);
-  const [cats, setCats] = useState([]);
+const classes = ({ isActive }) =>
+  isActive ? 'text-brand-dark font-semibold' : 'text-neutral-700 hover:text-brand-dark'
 
-  useEffect(() => {
-    getCategories().then((list) => setCats(Array.isArray(list) ? list : [])).catch(() => setCats([]));
-  }, []);
+export default function Navbar(){
+  const { user, logout, isAdmin } = useAuthCtx()
+  const ADMIN_EMAILS = ['distrimax.alvear@gmail.com']
+  const showAdmin = isAdmin || ADMIN_EMAILS.includes(user?.email ?? '')
 
-/*Menu de navegación */
   return (
-    <header className="navbar">
-      <div className="nav-inner">
-        <a href="/" className="brand" aria-label="Inicio">
-          <span className="brand-mark">
-            <img src={logo} alt="Logo Distrimax" className="brand-img" />
-          </span>
-          <span className="brand-name">DISTRIMAX</span>
-        </a>
-      {/*Informacion de la navbar */} 
-        <nav className={`nav-links ${open ? "is-open" : ""}`}>
-          {NAV_LINKS.map((link) =>
-            link.external ? (
-              <a key={link.href} href={link.href} className="nav-link" target="_blank" rel="noreferrer">
-                {link.label}
-              </a>
-            ) : (
-              <a key={link.href} href={link.href} className="nav-link">
-                {link.label}
-              </a>
-            )
+    <header className="bg-white/90 backdrop-blur border-b border-surface-hard">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+        <Link to="/" className="flex items-center gap-3">
+          <img src={logo} alt="Distrimax" className="h-9 w-auto" />
+          <span className="sr-only">Distrimax</span>
+        </Link>
+
+        <nav className="ml-auto flex items-center gap-4">
+          <NavLink to="/" className={classes} end>Inicio</NavLink>
+          <NavLink to="/productos" className={classes}>Productos</NavLink>
+          <NavLink to="/nosotros" className={classes}>Nosotros</NavLink>
+          <NavLink to="/contacto" className={classes}>Contacto</NavLink>
+          {showAdmin && <NavLink to="/admin" className={classes}>Admin</NavLink>}
+          {user ? (
+            <button onClick={logout} className="text-neutral-700 hover:text-brand-dark">Salir</button>
+          ) : (
+            <NavLink to="/login" className={classes}>Ingresar</NavLink>
           )}
-        
-          {/* Categorías dinámicas */}
-          {(Array.isArray(cats) ? cats : []).map((c) => {
-            if (typeof c !== "string" || !c) return null;
-            const label = c[0].toUpperCase() + c.slice(1);
-            return (
-              <NavLink key={c} to={`/category/${encodeURIComponent(c)}`} className="nav-link">
-                {label}
-              </NavLink>
-            );
-          })}
+          <CartWidget />
         </nav>
-      {/* CartWidget */}
-        <CartWidget count={cartCount} />
       </div>
     </header>
-  );
+  )
 }

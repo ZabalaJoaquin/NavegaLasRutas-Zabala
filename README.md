@@ -1,18 +1,64 @@
-<p align="center">
-  <img src="src/logos/logo%20distrimax%20fondo%204.jpg" alt="Distrimax" width="220" />
-</p>
+# Distrimax v2 · React + Vite
 
-<p align="center">
-  <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=000" />
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=fff" />
-  <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=000" />
-  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=fff" />
-  <img alt="CSS3" src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=fff" />
-</p>
+Versión personalizada con identidad visual, botón de WhatsApp, tira de Instagram y sección de marcas.
 
-# Distrimax — Catálogo y pedidos para clientes
+## ▶️ Uso
+```bash
+npm i
+npm run dev
+```
 
-**Idea:** Los clientes de **Distrimax** ingresan, ven **todos los productos**, los **agregan al carrito** y al confirmar **el pedido le llega a Distrimax** para preparación y entrega.
+## Colores y tipografía
+- Variables en `src/index.css` (`--brand`, `--brand-dark`, etc.).
+- Fondo con burbujas en `src/assets/bg-distrimax.svg`.
+- Fuente Google **Poppins**.
 
-- **Ahora (MVP):** catálogo público + carrito.
-- **Próximo paso:** portal **B2B** con **usuario y contraseña** (solo comercios/proveedores) para autogestionar productos, precios y pedidos.
+## WhatsApp
+- Configurá `VITE_WHATSAPP_PHONE` en `.env.local` (ej: `5492625XXXXXX`).
+
+## Firebase (opcional)
+- Igual que v1: completá `.env.local` y usá colecciones `products` y `orders`.
+- Sin Firebase, la app usa `src/data/products.json`.
+
+## Páginas y componentes nuevos
+- `Brands.jsx`: grilla de “marcas que trabajamos”.
+- `InstagramStrip.jsx`: tira de enlaces a Instagram sin depender de API.
+- `WhatsappButton.jsx`: botón fijo para chatear.
+- Hero y fondos actualizados al estilo Distrimax.
+
+---
+## Roles y accesos
+- Se integraron módulos de autenticación/roles del ZIP provisto (archivos copiados desde `src/auth|contexts|hooks|guards` si existían).
+- Rutas agregadas automáticamente (si se detectaron): `/admin`, `/clientes`, `/login`.
+- Si tu proyecto usa Firebase Auth, agregá las credenciales en `.env.local` y revisá los imports en los archivos copiados.
+
+## Notas de merge
+- `package.json` fusionado para incluir dependencias del ZIP y del branding v2.
+- Se intentó detectar colores del ZIP original y aplicarlos a `src/index.css` (`--brand`, `--brand-dark`, `--brand-accent`).
+- Logo: si el ZIP traía logo en `src/assets/` o `public/`, se copió a `src/assets/logo.*` y se ajustó el import en `Navbar.jsx`.
+
+
+---
+## Autenticación (Email/Password)
+- Si configurás Firebase Auth (Email/Password) en tu proyecto + `.env.local`, el login usará Firebase.
+- Sin Firebase Auth, funciona modo demo:
+  - admin: `admin@distrimax / admin123`
+  - cliente: `cliente@distrimax / cliente123`
+
+## Admin CRUD
+- Panel en `/admin` (sólo admin).
+- **Clientes**: alta/listado/eliminación (col. `clients`).
+- **Productos**: alta/listado/eliminación (col. `products`). La tienda lee de esta colección.
+- **Pedidos**: listado en vivo desde `orders` (el checkout ya los graba).
+
+## Reglas Firestore (desarrollo)
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true; // SOLO PARA PRUEBAS LOCALES
+    }
+  }
+}
+```
