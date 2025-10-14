@@ -1,0 +1,46 @@
+# --- Dependencias y builds ---
+node_modules/
+dist/
+dist-ssr/
+
+# --- Vercel (config local) ---
+.vercel/
+
+# --- Variables de entorno (no subas secretos) ---
+.env
+.env.*.local
+.env.local
+.env.*
+!.env.example
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# --- Caches / herramientas ---
+.vite/
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# --- Testing / coverage ---
+coverage/
+*.lcov
+
+# --- Editores / SO ---
+.vscode/
+.idea/
+*.sw?
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
