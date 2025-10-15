@@ -12,6 +12,7 @@ import { AuthProvider } from './auth/AuthContext.jsx'
 import ProtectedRoute from './guards/ProtectedRoute.jsx'
 import Login from './routes/Login.jsx'
 import Admin from './routes/Admin.jsx'
+import ProductDetail from './routes/ProductDetail.jsx'
 import Clientes from './routes/Clientes.jsx'
 import WhatsappButton from './components/WhatsappButton.jsx'
 
@@ -25,6 +26,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/productos" element={<Productos />} />
+            <Route path="/producto/:id" element={<ProductDetail />} />
             <Route path="/carrito" element={<Cart />} />
             <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
             <Route path="/nosotros" element={<Nosotros />} />

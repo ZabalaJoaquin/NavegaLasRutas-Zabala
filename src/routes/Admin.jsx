@@ -2,8 +2,8 @@ import { useState } from "react"
 import useCollection from "../hooks/useCollection.js"
 import { formatARS } from "../utils/currency.js"
 import {
-  db, doc, setDoc, serverTimestamp,
-  // lo usamos en Products/Orders a través del hook useCollection
+  db, doc, setDoc, getDoc, serverTimestamp,
+  collection, getDocs
 } from "../utils/firebase.js"
 import { firebaseApiKey } from "../utils/firebase.js"
 
@@ -59,17 +59,14 @@ function Clients() {
 
       if (!name || !email || !password) throw new Error("Nombre, email y contraseña son obligatorios")
 
-      // 1) Crear usuario en Firebase Auth SIN romper tu sesión (REST)
       const uid = await createAuthUser(email, password)
 
-      // 2) Guardar perfil/rol en users/{uid}
       await setDoc(doc(db, "users", uid), {
         role: "cliente",
         name, email, phone, address,
         createdAt: serverTimestamp(),
       })
 
-      // 3) Guardar fila visible en "clients"
       await create({ uid, name, email, phone, address, createdAt: new Date() })
 
       setMsg("Cliente creado y habilitado para ingresar.")
@@ -133,21 +130,262 @@ function Clients() {
   )
 }
 
-/* -------------------- PRODUCTOS -------------------- */
+/* -------------------- PRODUCTOS (ID manual + DESCRIPCIÓN + SINCRONIZAR) -------------------- */
 function Products() {
   const { items, loading, error, create, remove } = useCollection("products", { sortBy: "name", desc: false, fallback: [] })
-  const [form, setForm] = useState({ id: "", name: "", price: "", category: "", img: "" })
+  const [form, setForm] = useState({ id: "", name: "", price: "", category: "", img: "", description: "" })
+  const [msg, setMsg] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  // --- Sincronización desde Sheet/CSV ---
+  const [sheetUrl, setSheetUrl] = useState("")
+  const [csvFile, setCsvFile] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState("")
+  const [updateExisting, setUpdateExisting] = useState(false)
+
+  function sanitizeId(s = "") {
+    return s.trim().replace(/\//g, "-")
+  }
+  function slugify(s='') {
+    return s.toLowerCase().trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
+      .replace(/-+/g,'-').slice(0,60)
+  }
+  function toNum(v) {
+    const n = Number(String(v).replace(",", "."))
+    return Number.isFinite(n) ? n : null
+  }
+
+  // CSV parser simple (soporta comillas y comas dentro de comillas)
+  function parseCSV(text) {
+    const rows = []
+    let row = []
+    let i = 0, field = '', inQuotes = false
+
+    while (i < text.length) {
+      const c = text[i]
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i+1] === '"') { field += '"'; i += 2; continue }
+          inQuotes = false; i++; continue
+        } else {
+          field += c; i++; continue
+        }
+      } else {
+        if (c === '"') { inQuotes = true; i++; continue }
+        if (c === ',') { row.push(field); field = ''; i++; continue }
+        if (c === '\r') { i++; continue }
+        if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue }
+        field += c; i++
+      }
+    }
+    // último campo/row
+    row.push(field); rows.push(row)
+
+    // headers
+    const headers = rows.shift()?.map(h => (h || '').trim()) || []
+    return rows
+      .filter(r => r.some(cell => String(cell).trim() !== ''))
+      .map(r => {
+        const obj = {}
+        headers.forEach((h, idx) => { obj[h] = r[idx] !== undefined ? String(r[idx]).trim() : '' })
+        return obj
+      })
+  }
+
+  // Normaliza una fila del CSV al schema de productos
+  function normalizeRow(r) {
+    const id = sanitizeId(r.id || r.ID || r.Id || '')
+    const name = r.name || r.Nombre || r.NOMBRE || ''
+    const price = toNum(r.price ?? r.Precio ?? r.PRECIO)
+    const category = r.category || r.Categoria || r.Categoría || ''
+    const img = r.img || r.imagen || r.image || ''
+    const description = (r.description || r.Descripcion || r.Descripción || '').trim()
+    const brand = r.brand || r.Marca || ''
+    const varietal = r.varietal || ''
+    const origin = r.origin || r.Origen || ''
+    const volumeMl = toNum(r.volumeMl ?? r.volumenMl ?? r.ml ?? r.Volumen)
+    const abv = toNum(r.abv ?? r.alcohol ?? r.Alcohol)
+    const caseUnits = toNum(r.caseUnits ?? r.caja ?? r.Caja)
+    const sku = r.sku || r.SKU || ''
+
+    const docId = id || (name ? slugify(name) : '')
+    if (!docId) return null
+
+    const data = {
+      name: name || 'Producto',
+      price: Number(price ?? 0),
+      category, img, description,
+      brand, varietal, origin,
+      volumeMl: volumeMl ?? null,
+      abv: abv ?? null,
+      caseUnits: caseUnits ?? null,
+      sku: sku || '',
+      updatedAt: new Date()
+    }
+    // limpiamos nulls
+    Object.keys(data).forEach(k => { if (data[k] === null || data[k] === undefined) delete data[k] })
+    return { docId, data }
+  }
+
+  async function fetchCSVFromSheet(url) {
+    // Acepta:
+    // - url ya export ?format=csv
+    // - url edit#gid -> la transformamos a export csv
+    try {
+      let u = url.trim()
+      const editMatch = u.match(/\/spreadsheets\/d\/([^/]+)\/.*(?:#gid=(\d+))?/)
+      if (editMatch && !u.includes('/export?format=csv')) {
+        const id = editMatch[1]
+        const gid = editMatch[2] || '0'
+        u = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`
+      }
+      const res = await fetch(u)
+      if (!res.ok) throw new Error('No se pudo descargar el CSV (revisá el enlace y que sea público)')
+      return await res.text()
+    } catch (e) {
+      throw new Error(e?.message || 'Error al descargar CSV')
+    }
+  }
+
+  async function syncFromCSVText(text) {
+    const rows = parseCSV(text)
+    if (!rows.length) throw new Error('CSV vacío o sin filas de datos')
+
+    // Traemos IDs existentes para decidir crear/actualizar sin hacer N requests
+    const existing = new Set()
+    try {
+      const qs = await getDocs(collection(db, 'products'))
+      qs.forEach(d => existing.add(d.id))
+    } catch {
+      // si falla, continuamos (hará más sets)
+    }
+
+    let created = 0, updated = 0, skipped = 0, errors = 0
+    for (const r of rows) {
+      const norm = normalizeRow(r)
+      if (!norm) { skipped++; continue }
+      const { docId, data } = norm
+
+      try {
+        const ref = doc(db, 'products', docId)
+        if (existing.has(docId)) {
+          if (updateExisting) {
+            await setDoc(ref, data, { merge: true })
+            updated++
+          } else {
+            skipped++
+          }
+        } else {
+          await setDoc(ref, { ...data, createdAt: new Date() })
+          created++
+          existing.add(docId)
+        }
+      } catch {
+        errors++
+      }
+    }
+    return { created, updated, skipped, errors, total: rows.length }
+  }
+
+  async function handleSync() {
+    setSyncMsg('')
+    setSyncing(true)
+    try {
+      let csvText = ''
+      if (csvFile) {
+        csvText = await csvFile.text()
+      } else if (sheetUrl.trim()) {
+        csvText = await fetchCSVFromSheet(sheetUrl)
+      } else {
+        throw new Error('Pegá la URL del Sheet (CSV) o subí un archivo .csv')
+      }
+
+      const res = await syncFromCSVText(csvText)
+      setSyncMsg(`Sincronización ok. Total filas: ${res.total} · Creados: ${res.created} · Actualizados: ${res.updated} · Omitidos: ${res.skipped} · Errores: ${res.errors}`)
+    } catch (e) {
+      setSyncMsg(e?.message || 'Error en la sincronización')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function onSubmit(e) {
     e.preventDefault()
-    await create({ ...form, price: Number(form.price || 0) })
-    setForm({ id: "", name: "", price: "", category: "", img: "" })
+    setMsg("")
+    setBusy(true)
+    try {
+      const customId = sanitizeId(form.id)
+      const data = {
+        name: form.name,
+        price: Number(form.price || 0),
+        category: form.category || "",
+        img: form.img || "",
+        description: form.description?.trim() || "",
+        createdAt: new Date()
+      }
+
+      if (customId) {
+        const ref = doc(db, "products", customId)
+        const snap = await getDoc(ref)
+        if (snap.exists()) throw new Error("Ya existe un producto con ese ID")
+        await setDoc(ref, data)
+      } else {
+        await create(data) // ID automático (tu hook)
+      }
+
+      setMsg("Producto guardado.")
+      setForm({ id: "", name: "", price: "", category: "", img: "", description: "" })
+    } catch (err) {
+      setMsg(err?.message || "No se pudo guardar el producto")
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <Section title="Productos">
+      {/* --- Sincronizar desde Sheet/CSV --- */}
+      <div className="mb-5 rounded-xl2 border border-surface-hard bg-white p-3">
+        <div className="grid md:grid-cols-5 gap-2 items-end">
+          <div className="md:col-span-3">
+            <label className="text-sm text-neutral-600">URL del CSV/Sheet</label>
+            <input
+              className="w-full border border-surface-hard rounded-xl2 px-3 py-2"
+              placeholder="https://docs.google.com/spreadsheets/d/…/export?format=csv&gid=0"
+              value={sheetUrl}
+              onChange={e=>setSheetUrl(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-neutral-600">o subir .csv</label>
+            <input type="file" accept=".csv,text/csv" onChange={e=>setCsvFile(e.target.files?.[0]||null)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <input id="upd-exist" type="checkbox" checked={updateExisting} onChange={e=>setUpdateExisting(e.target.checked)} />
+            <label htmlFor="upd-exist" className="text-sm">Actualizar existentes</label>
+          </div>
+          <div>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="w-full px-4 py-2 rounded-xl2 bg-brand text-white"
+            >
+              {syncing ? 'Sincronizando…' : 'Sincronizar'}
+            </button>
+          </div>
+        </div>
+        {syncMsg && <p className="text-sm mt-2">{syncMsg}</p>}
+        <p className="text-xs text-neutral-600 mt-1">
+          La hoja debe tener columnas: <code>id</code>, <code>name</code>, <code>price</code>, <code>category</code>, <code>img</code>, <code>description</code>, <code>brand</code>, <code>varietal</code>, <code>origin</code>, <code>volumeMl</code>, <code>abv</code>, <code>caseUnits</code>, <code>sku</code>. Los faltantes se ignoran.
+        </p>
+      </div>
+
+      {/* --- Alta manual --- */}
       <form onSubmit={onSubmit} className="grid md:grid-cols-5 gap-2 mb-4">
-        <input className="border border-surface-hard rounded-xl2 px-3 py-2" placeholder="ID (opcional)"
+        <input className="border border-surface-hard rounded-xl2 px-3 py-2" placeholder="ID (si lo ponés se usa como doc.id)"
                value={form.id} onChange={e=>setForm(v=>({...v,id:e.target.value}))} />
         <input className="border border-surface-hard rounded-xl2 px-3 py-2" placeholder="Nombre" required
                value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))} />
@@ -155,25 +393,45 @@ function Products() {
                value={form.price} onChange={e=>setForm(v=>({...v,price:e.target.value}))} />
         <input className="border border-surface-hard rounded-xl2 px-3 py-2" placeholder="Categoría"
                value={form.category} onChange={e=>setForm(v=>({...v,category:e.target.value}))} />
-        <input className="border border-surface-hard rounded-xl2 px-3 py-2" placeholder="Imagen (/prod/...)"
+        <input className="border border-surface-hard rounded-xl2 px-3 py-2" placeholder="Imagen (URL)"
                value={form.img} onChange={e=>setForm(v=>({...v,img:e.target.value}))} />
-        <button className="col-span-full md:col-span-1 px-4 py-2 rounded-xl2 bg-brand text-white">Agregar</button>
+
+        {/* Descripción */}
+        <textarea
+          className="md:col-span-5 border border-surface-hard rounded-xl2 px-3 py-2 min-h-[90px]"
+          placeholder="Descripción del producto"
+          value={form.description}
+          onChange={e=>setForm(v=>({...v, description: e.target.value}))}
+        />
+
+        <button disabled={busy} className="col-span-full md:col-span-1 px-4 py-2 rounded-xl2 bg-brand text-white">
+          {busy ? "Guardando..." : "Agregar"}
+        </button>
       </form>
+
+      {msg && <p className="text-sm">{msg}</p>}
 
       {loading ? "Cargando..." : error ? <p className="text-red-600">{error}</p> : (
         <div className="overflow-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left"><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Imagen</th><th></th></tr>
+              <tr className="text-left">
+                <th>Nombre</th><th>Precio</th><th>Categoría</th><th>Imagen</th><th>Descripción</th><th></th>
+              </tr>
             </thead>
             <tbody>
               {items.map(p => (
-                <tr key={p.id} className="border-t">
-                  <td>{p.name}</td>
-                  <td>{formatARS(Number(p.price || 0))}</td>
-                  <td>{p.category}</td>
-                  <td className="max-w-[240px] truncate">{p.img}</td>
-                  <td className="text-right">
+                <tr key={p.id} className="border-t align-top">
+                  <td className="py-2">{p.name}</td>
+                  <td className="py-2">{formatARS(Number(p.price || 0))}</td>
+                  <td className="py-2">{p.category}</td>
+                  <td className="py-2 max-w-[240px] truncate" title={p.img}>{p.img}</td>
+                  <td className="py-2 max-w-[340px]">
+                    <div className="truncate" title={p.description || ''}>
+                      {p.description || <span className="text-neutral-400">Sin descripción</span>}
+                    </div>
+                  </td>
+                  <td className="py-2 text-right">
                     <button className="text-red-600" onClick={() => remove(p.id)}>Eliminar</button>
                   </td>
                 </tr>

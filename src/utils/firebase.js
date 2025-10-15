@@ -1,37 +1,37 @@
 // src/utils/firebase.js
-// Firebase listo con Auth + Firestore usando tu config directa (sin .env)
+// Firebase listo con Auth + Firestore + Storage usando tu config directa
 
 import { initializeApp } from 'firebase/app'
-import { serverTimestamp } from 'firebase/firestore'
-export { serverTimestamp }
 import {
   getFirestore,
   collection, getDocs, addDoc, doc, getDoc, setDoc,
-  updateDoc, deleteDoc, onSnapshot, query, orderBy
+  updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
 } from 'firebase/firestore'
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from 'firebase/auth'
+import {
+  getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject
+} from 'firebase/storage'
 
-// Tu configuración (copiada de Firebase)
+// ⚠️ Tu configuración
 const config = {
   apiKey: "AIzaSyCKqkM1QIb8mViWTFqcyqIzgO_0alg4CBc",
   authDomain: "distrimax-c06b7.firebaseapp.com",
   projectId: "distrimax-c06b7",
-  storageBucket: "distrimax-c06b7.firebasestorage.app",
+  storageBucket: "distrimax-c06b7.firebasestorage.app", // si da errores, probá con: "distrimax-c06b7.appspot.com"
   messagingSenderId: "73229978791",
   appId: "1:73229978791:web:91a6f145bc1da26785df82"
-  // Nota: si tuvieras problemas con Storage, probá con:
-  // storageBucket: "distrimax-c06b7.appspot.com"
 }
 
-let app, db, auth
+let app, db, auth, storage
 let enabled = false
 
 try {
   app = initializeApp(config)
   db = getFirestore(app)
   auth = getAuth(app)
+  storage = getStorage(app)
   enabled = true
 } catch (e) {
   console.warn('Firebase deshabilitado:', e?.message || e)
@@ -41,12 +41,18 @@ export const isFirebaseEnabled = () => enabled
 export const isAuthEnabled = () => !!auth
 export const firebaseApiKey = config.apiKey
 
+// Exports agrupados para que puedas importar desde cualquier parte
 export {
-  // core
-  db, auth,
-  // firestore
+  // Core
+  db, auth, storage,
+
+  // Firestore
   collection, getDocs, addDoc, doc, getDoc, setDoc,
-  updateDoc, deleteDoc, onSnapshot, query, orderBy,
-  // auth
-  signInWithEmailAndPassword, signOut, onAuthStateChanged
+  updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp,
+
+  // Auth
+  signInWithEmailAndPassword, signOut, onAuthStateChanged,
+
+  // Storage
+  storageRef, uploadBytesResumable, getDownloadURL, deleteObject
 }
