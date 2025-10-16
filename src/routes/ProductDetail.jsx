@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   db, doc, getDoc, collection, getDocs, updateDoc,
+  // Storage (asegúrate de exportarlos desde utils/firebase.js)
   storage, storageRef, uploadBytesResumable, getDownloadURL
 } from '../utils/firebase.js'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -11,6 +12,7 @@ import QuantitySelector from '../components/QuantitySelector.jsx'
 import ProductSpecs from '../components/ProductSpecs.jsx'
 import RelatedProducts from '../components/RelatedProducts.jsx'
 
+// slug para buscar por nombre si el id es un slug
 function slugify(s='') {
   return s.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -18,7 +20,7 @@ function slugify(s='') {
     .replace(/-+/g,'-').slice(0,60)
 }
 
-// compresión simple a WEBP en el navegador (si subís archivo)
+// compresión simple a WEBP si se sube archivo (mejora peso sin tocar servidor)
 async function compressToWebP(file, { maxWidth = 1200, quality = 0.85 } = {}) {
   const img = await new Promise((res, rej) => {
     const i = new Image()
@@ -43,11 +45,12 @@ export default function ProductDetail() {
   const { addToCart } = useCart()
 
   const [product, setProduct] = useState(null)
-  const [productDocId, setProductDocId] = useState(null) // si viene de Firestore, guardamos el doc.id real
+  const [productDocId, setProductDocId] = useState(null)   // id real del doc en Firestore
   const [notFound, setNotFound] = useState(false)
   const [qty, setQty] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
 
+  // cargo el producto (Firestore -> slug -> JSON local)
   useEffect(() => {
     window.scrollTo(0, 0)
     setNotFound(false)
@@ -58,15 +61,14 @@ export default function ProductDetail() {
 
     ;(async () => {
       try {
-        // 1) Por doc.id exacto
+        // 1) por id exacto
         const snap = await getDoc(doc(db, 'products', id))
         if (snap.exists()) {
           setProduct({ id: snap.id, ...snap.data() })
           setProductDocId(snap.id)
           return
         }
-
-        // 2) Buscar por slug de name en Firestore
+        // 2) por slug de nombre en Firestore
         try {
           const qs = await getDocs(collection(db, 'products'))
           let found = null
@@ -78,22 +80,20 @@ export default function ProductDetail() {
           })
           if (found) {
             setProduct(found)
-            setProductDocId(found.id) // importante para poder editar
+            setProductDocId(found.id)
             return
           }
         } catch {}
-
-        // 3) Fallback JSON local (no editable)
+        // 3) fallback JSON local
         const local = (await import('../data/products.json')).default
         const foundLocal =
           local.find(p => (p.id || '').toLowerCase() === id.toLowerCase()) ||
           local.find(p => slugify(p.name || '') === id.toLowerCase())
         if (foundLocal) {
           setProduct({ id: foundLocal.id || id, ...foundLocal })
-          setProductDocId(null) // viene de JSON -> no editable
+          setProductDocId(null) // viene de json, no editable inline
           return
         }
-
         setNotFound(true)
       } catch {
         setNotFound(true)
@@ -101,6 +101,7 @@ export default function ProductDetail() {
     })()
   }, [id])
 
+  // saneo de campos y defaults
   const safe = useMemo(() => {
     if (!product) return null
     return {
@@ -117,10 +118,12 @@ export default function ProductDetail() {
       abv: product.abv ?? null,
       caseUnits: product.caseUnits ?? product.boxUnits ?? null,
       sku: product.sku || '',
+      stock: Number(product.stock ?? Infinity) // si no hay, no limitamos
     }
   }, [product, id])
 
   const price = useMemo(() => Number(safe?.price ?? 0), [safe])
+  const outOfStock = useMemo(() => Number.isFinite(safe?.stock) && safe.stock <= 0, [safe])
 
   if (notFound) {
     return (
@@ -133,17 +136,19 @@ export default function ProductDetail() {
 
   if (!safe) return <section className="max-w-6xl mx-auto px-4 py-10">Cargando...</section>
 
+  // agregar al carrito con la cantidad seleccionada
   function handleAdd() {
     const n = Math.max(1, Number(qty || 1))
     addToCart(safe, n)
     setJustAdded(true)
+    // oculto el contador por la consigna y muestro feedback
     setTimeout(() => setJustAdded(false), 1200)
   }
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Columna Imagen */}
+        {/* Columna imagen */}
         <div>
           <img
             src={safe.img}
@@ -156,9 +161,14 @@ export default function ProductDetail() {
               Caja x {Number(safe.caseUnits)} unidades
             </div>
           )}
+          {Number.isFinite(safe.stock) && (
+            <div className="mt-2 text-sm text-neutral-600">
+              Stock: {safe.stock > 0 ? safe.stock : 'sin stock'}
+            </div>
+          )}
         </div>
 
-        {/* Columna Info */}
+        {/* Columna info */}
         <div>
           <h1 className="text-3xl font-bold">{safe.name}</h1>
           {safe.brand && <div className="text-neutral-600 mt-1">{safe.brand}</div>}
@@ -177,14 +187,34 @@ export default function ProductDetail() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Consigna: ItemCount en detalle, con validaciones por stock, y ocultar tras agregar */}
             {isLogged ? (
-              <>
-                <QuantitySelector value={qty} onChange={(v) => setQty(Number(v))} />
-                <button className="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold" onClick={handleAdd}>
-                  Agregar al carrito
-                </button>
-                {justAdded && <span className="text-sm text-brand-dark font-semibold">¡Agregado! ✔</span>}
-              </>
+              outOfStock ? (
+                <span className="text-red-600">Sin stock</span>
+              ) : justAdded ? (
+                <>
+                  <span className="text-sm text-brand-dark font-semibold">¡Agregado al carrito! ✔</span>
+                  <Link to="/carrito" className="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold">
+                    Ir al carrito
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <QuantitySelector
+                    value={qty}
+                    onChange={(v) => setQty(Math.max(1, Math.min(Number(v || 1), safe.stock || Infinity)))}
+                    min={1}
+                    max={Number.isFinite(safe.stock) ? safe.stock : undefined}
+                  />
+                  <button
+                    className="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold"
+                    onClick={handleAdd}
+                    disabled={Number.isFinite(safe.stock) && qty > safe.stock}
+                  >
+                    Agregar al carrito
+                  </button>
+                </>
+              )
             ) : (
               <Link to="/login" className="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold">
                 Ingresar para comprar
@@ -204,7 +234,7 @@ export default function ProductDetail() {
       {/* Relacionados */}
       <RelatedProducts currentId={safe.id} category={safe.category} />
 
-      {/* -------- Edición (admin) -------- */}
+      {/* Edición inline (solo admin y si es un doc real de Firestore) */}
       {isAdmin && productDocId && (
         <AdminInlineEditor
           initial={safe}
@@ -271,10 +301,10 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
         volumeMl: toNum(form.volumeMl),
         abv: toNum(form.abv),
         caseUnits: toNum(form.caseUnits),
+        stock: toNum(form.stock),                 // ← NUEVO: stock
         img: upload?.url || form.img || '',
       }
-
-      // limpiamos nulls indefinidos
+      // saco null/undefined
       Object.keys(updates).forEach(k => {
         if (updates[k] === null || updates[k] === undefined) delete updates[k]
       })
@@ -368,6 +398,12 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
                    value={form.sku ?? ''} onChange={e=>setForm(v=>({...v,sku:e.target.value}))} />
           </div>
 
+          <div>
+            <label className="text-sm text-neutral-600">Stock</label>
+            <input type="number" className="w-full border rounded-xl2 px-3 py-2"
+                   value={form.stock ?? ''} onChange={e=>setForm(v=>({...v,stock:e.target.value}))} />
+          </div>
+
           <div className="md:col-span-2">
             <label className="text-sm text-neutral-600">Imagen (URL)</label>
             <input className="w-full border rounded-xl2 px-3 py-2"
@@ -378,7 +414,7 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
             <label className="text-sm text-neutral-600">o subir archivo</label>
             <input type="file" accept="image/*"
                    onChange={(e)=>setFile(e.target.files?.[0] || null)} />
-            {file && progress > 0 && busy && (
+            {file && busy && progress > 0 && (
               <div className="text-xs mt-1">{progress}%</div>
             )}
           </div>

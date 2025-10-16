@@ -1,5 +1,5 @@
-// src/routes/Productos.jsx
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { db, collection, getDocs } from '../utils/firebase.js'
 import ProductCard from '../components/ProductCard.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -17,7 +17,9 @@ function norm(s='') {
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
 }
 function getStableId(p, i) {
-  return String(p.id || p.routeKey || p.sku || (p.name ? slugify(p.name) : 'producto') + '-' + i)
+  // siempre agrego sufijo -i para evitar colisiones de key
+  const base = p.id || p.routeKey || p.sku || (p.name ? slugify(p.name) : 'producto')
+  return `${base}-${i}`
 }
 function expandQuery(q='') {
   const x = norm(q)
@@ -34,15 +36,22 @@ function expandQuery(q='') {
   return Array.from(out)
 }
 
-/* ---------- componente ---------- */
 export default function Productos() {
   const { user } = useAuth()
   const { addToCart } = useCart()
+  const location = useLocation()
 
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('todas') // categoría seleccionada
+
+  // leo ?q= del URL si existe (viene desde el Home)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const initialQ = params.get('q') || ''
+    if (initialQ) setQ(initialQ)
+  }, [location.search])
 
   // carga productos (Firestore -> JSON fallback)
   useEffect(() => {
@@ -81,7 +90,7 @@ export default function Productos() {
       set.add(c || 'Sin categoría')
     })
     const arr = Array.from(set).sort((a,b)=>a.localeCompare(b,'es'))
-    // orden manual opcional para que aparezcan primero:
+    // orden manual para que aparezcan primero
     const prefer = ['Vinos','Whisky','Fernet','Champagne','Ron','Energizante']
     arr.sort((a,b) => {
       const ia = prefer.indexOf(a); const ib = prefer.indexOf(b)
@@ -104,12 +113,12 @@ export default function Productos() {
       const haystack = norm([
         p.name, p.description, p.category, p.brand, p.varietal, p.origin, p.sku
       ].filter(Boolean).join(' '))
-      // Deben estar todos los tokens (AND)
+      // que estén todos los tokens
       return tokens.every(t => haystack.includes(t))
     })
   }, [all, q, cat])
 
-  // agrupar por categoría para render en secciones
+  // agrupar por categoría para render por secciones
   const grouped = useMemo(() => {
     const map = new Map()
     filtered.forEach(p => {

@@ -5,7 +5,9 @@ import { initializeApp } from 'firebase/app'
 import {
   getFirestore,
   collection, getDocs, addDoc, doc, getDoc, setDoc,
-  updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
+  updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp,
+  // 👇 agrego helpers para transacciones / batch / incrementos
+  runTransaction, writeBatch, increment
 } from 'firebase/firestore'
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
@@ -49,6 +51,8 @@ export {
   // Firestore
   collection, getDocs, addDoc, doc, getDoc, setDoc,
   updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp,
+  // 👇 nuevos helpers de Firestore que vamos a usar en Checkout
+  runTransaction, writeBatch, increment,
 
   // Auth
   signInWithEmailAndPassword, signOut, onAuthStateChanged,
