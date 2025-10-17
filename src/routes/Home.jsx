@@ -1,3 +1,4 @@
+// src/routes/Home.jsx
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db, collection, getDocs } from '../utils/firebase.js'
@@ -30,31 +31,33 @@ function ImgPh({ src, alt = '', className = '', rounded = 'rounded-2xl' }) {
   )
 }
 
-/* Reel de Instagram adaptativo (se ajusta al ancho/alto del mosaico) */
 function InstagramReel({ url, className = '', rounded = 'rounded-2xl' }) {
-  const containerRef = useRef(null)
+  const [ready, setReady] = useState(false)
+  const ref = useRef(null)
 
   useEffect(() => {
-    const existing = document.getElementById('ig-embed')
-    if (!existing) {
-      const s = document.createElement('script')
-      s.id = 'ig-embed'
-      s.async = true
-      s.src = 'https://www.instagram.com/embed.js'
-      document.body.appendChild(s)
-      s.onload = () => window?.instgrm?.Embeds?.process()
+    const id = 'ig-embed'
+    const ensure = () => window?.instgrm?.Embeds?.process()
+    const s = document.getElementById(id)
+    if (!s) {
+      const tag = document.createElement('script')
+      tag.id = id
+      tag.async = true
+      tag.src = 'https://www.instagram.com/embed.js'
+      tag.onload = ensure
+      document.body.appendChild(tag)
     } else {
-      window?.instgrm?.Embeds?.process()
+      ensure()
     }
+    const t = setTimeout(() => setReady(true), 1800)
+    return () => clearTimeout(t)
   }, [url])
 
   return (
     <div
-      ref={containerRef}
+      ref={ref}
       className={`relative w-full overflow-hidden border border-surface-hard bg-white ${rounded} ${className}`}
-      style={{
-        aspectRatio: '9 / 16', // mantiene proporción vertical tipo reel
-      }}
+      style={{ aspectRatio: '9 / 16' }}
     >
       <blockquote
         className="instagram-media absolute inset-0 w-full h-full"
@@ -62,14 +65,15 @@ function InstagramReel({ url, className = '', rounded = 'rounded-2xl' }) {
         data-instgrm-version="14"
         style={{ margin: 0, padding: 0, width: '100%', height: '100%' }}
       />
-      <div className="absolute inset-0 grid place-items-center text-sm text-neutral-600 bg-white/50">
-        Cargando Reel…
-      </div>
+      {!ready && (
+        <div className="absolute inset-0 grid place-items-center text-sm text-neutral-600 bg-white/50">
+          Cargando Reel…
+        </div>
+      )}
     </div>
   )
 }
 
-/* Orden de categorías para mostrar primero las más comunes */
 function preferOrder(a, b) {
   const pref = ['Vinos', 'Whisky', 'Fernet', 'Champagne', 'Ron', 'Energizante']
   const ia = pref.indexOf(a), ib = pref.indexOf(b)
@@ -88,7 +92,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
 
-  // Cargar productos (primero de Firestore, si falla usa JSON local)
   useEffect(() => {
     (async () => {
       setLoading(true)
@@ -96,10 +99,7 @@ export default function Home() {
         const qs = await getDocs(collection(db, 'products'))
         const arr = []
         qs.forEach(d => arr.push({ id: d.id, routeKey: d.id, ...d.data() }))
-        if (arr.length) {
-          setAll(arr)
-          return
-        }
+        if (arr.length) { setAll(arr); return }
         const local = (await import('../data/products.json')).default
         setAll(local)
       } catch {
@@ -111,7 +111,6 @@ export default function Home() {
     })()
   }, [])
 
-  // Crear lista de categorías
   const categories = useMemo(() => {
     const map = new Map()
     all.forEach(p => {
@@ -121,38 +120,32 @@ export default function Home() {
     return Array.from(map.entries()).sort((a, b) => preferOrder(a[0], b[0]))
   }, [all])
 
-  // Productos destacados (los últimos creados)
   const featured = useMemo(() => {
     const copy = [...all]
-    copy.sort((a, b) => {
-      const an = a?.createdAt?.seconds || 0
-      const bn = b?.createdAt?.seconds || 0
-      return bn - an
-    })
+    copy.sort((a, b) => (b?.createdAt?.seconds || 0) - (a?.createdAt?.seconds || 0))
     return copy.slice(0, 6)
   }, [all])
 
-  // Buscar productos (redirige a /productos?q=)
   function onSearchSubmit(e) {
     e.preventDefault()
     const val = q.trim()
     navigate(val ? `/productos?q=${encodeURIComponent(val)}` : '/productos')
   }
 
+  const reelUrl = 'https://www.instagram.com/reel/DJkin7NtnR6/' // cambiá acá si subís otro reel
+
   return (
     <section className="relative">
-      {/* Fondo con degradé */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-brand/10 via-transparent to-brand/10" />
         <div className="absolute -top-40 -left-32 w-[26rem] h-[26rem] rounded-full bg-brand/20 blur-3xl" />
         <div className="absolute -bottom-40 -right-32 w-[26rem] h-[26rem] rounded-full bg-brand/20 blur-3xl" />
       </div>
 
-      {/* Hero principal */}
+      {/* Hero */}
       <div className="relative overflow-hidden">
-        <div className="relative max-w-6xl mx-auto px-4 pt-12 pb-10 md:pt-16 md:pb-14">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            {/* Texto principal + buscador */}
+        <div className="relative max-w-7xl mx-auto px-6 md:px-8 pt-12 pb-10 md:pt-16 md:pb-14">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
             <div>
               <img src={logo} alt="Distrimax" className="h-14 w-auto opacity-90" />
               <h1 className="mt-4 text-3xl md:text-5xl font-extrabold">
@@ -162,7 +155,6 @@ export default function Home() {
                 Mayorista de vinos, whiskies, espumantes, energizantes y más. Clientes registrados ven precios y compran online.
               </p>
 
-              {/* Buscador */}
               <form onSubmit={onSearchSubmit} className="mt-5">
                 <div className="relative">
                   <input
@@ -189,29 +181,26 @@ export default function Home() {
               </form>
             </div>
 
-            {/* Mosaico con el Reel vertical a la izquierda */}
+            {/* Mosaico: reel alto a la izquierda */}
             <div className="grid grid-cols-2 gap-3">
-              {/* Reel vertical (ajustado al ancho del mosaico) */}
-              <InstagramReel
-                url="https://www.instagram.com/reel/"
-                className="h-full"
-              />
-
-              {/* Imagen al lado del reel */}
-              <ImgPh src="/ai/hero-2.webp" className="h-44 md:h-72 w-full" />
-
-              {/* Imagen ancha debajo */}
-              <ImgPh src="/ai/hero-3.webp" className="h-36 md:h-48 w-full col-span-2" />
+              <div className="col-span-1">
+                <InstagramReel url={reelUrl} className="h-full" />
+              </div>
+              <div className="col-span-1 flex flex-col gap-3">
+                <ImgPh src="/ai/hero-2.webp" className="h-44 md:h-[18rem] w-full" />
+                <ImgPh src="/ai/hero-1.webp" className="h-44 md:h-[12rem] w-full" />
+              </div>
+              <div className="col-span-2">
+                <ImgPh src="/ai/hero-3.webp" className="h-36 md:h-48 w-full" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Marcas oficiales */}
       <Brands />
 
-      {/* Categorías */}
-      <div className="max-w-6xl mx-auto px-4 mt-4">
+      <div className="max-w-7xl mx-auto px-6 md:px-8 mt-4">
         <h2 className="text-xl font-semibold mb-3">Explorar por categoría</h2>
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
@@ -239,8 +228,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Productos destacados */}
-      <div className="max-w-6xl mx-auto px-4 mt-10 mb-14">
+      <div className="max-w-7xl mx-auto px-6 md:px-8 mt-10 mb-14">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Destacados</h2>
           <Link to="/productos" className="text-sm text-brand-dark hover:underline">
@@ -263,9 +251,8 @@ export default function Home() {
         )}
       </div>
 
-      {/* Bloques informativos inferiores */}
       <div className="bg-gradient-to-r from-brand/10 via-transparent to-brand/10">
-        <div className="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-3 gap-4">
+        <div className="max-w-7xl mx-auto px-6 md:px-8 py-10 grid md:grid-cols-3 gap-4">
           <div className="rounded-xl2 border border-surface-hard bg-white p-4">
             <div className="font-semibold">Atención a clientes</div>
             <p className="text-sm text-neutral-700 mt-1">Consultas sobre pedidos, stock y entregas.</p>

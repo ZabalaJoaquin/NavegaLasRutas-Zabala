@@ -5,14 +5,16 @@
 :root {
   --brand: #18191b;        /* principal */
   --brand-dark: #18191b;   /* oscuro */
-  --brand-light: #d2f7e9;  /* claro */
+  --brand-light: #f7d8d2;  /* claro */
   --brand-accent: #18191b; /* acento (amarillo) */
   --surface: #ae87441a;      /* fondo */
   --surface-soft: #ae8744; /* tarjetas */
   --surface-hard: #18191b; /* bordes */
 }
 
-html, body, #root { height: 100%; }
+html, body {
+  overflow-x: hidden;
+}
 
 .glass { background: rgba(255,255,255,.7); backdrop-filter: blur(8px); }
 .ring-brand { box-shadow: 0 0 0 6px rgba(10,143,91,.12); }
