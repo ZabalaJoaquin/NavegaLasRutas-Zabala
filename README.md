@@ -7,7 +7,6 @@
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg" width="80" alt="React logo" />
 <img src="https://firebase.google.com/static/images/brand-guidelines/logo-logomark.png" width="70" alt="Firebase logo" />
-<img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Tailwind_CSS_Logo.svg" width="80" alt="Tailwind logo" />
 
 ### 🚀 *Proyecto Final - Curso React JS (Coderhouse)*
 
