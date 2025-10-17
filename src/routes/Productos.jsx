@@ -5,7 +5,6 @@ import ProductCard from '../components/ProductCard.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
 
-/* ---------- helpers ---------- */
 function slugify(s='') {
   return s.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -44,7 +43,7 @@ export default function Productos() {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
-  const [cat, setCat] = useState('todas') // categoría seleccionada
+  const [cat, setCat] = useState('todas') 
 
   // leo ?q= del URL si existe (viene desde el Home)
   useEffect(() => {

@@ -71,7 +71,7 @@ export default function Checkout(){
           })),
           total: Number(total || 0),
           createdAt: serverTimestamp(),
-          status: 'created'
+          status: 'pedido'
         }
         tx.set(orderRef, orderData)
       })

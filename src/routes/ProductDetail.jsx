@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   db, doc, getDoc, collection, getDocs, updateDoc,
-  // Storage (asegúrate de exportarlos desde utils/firebase.js)
   storage, storageRef, uploadBytesResumable, getDownloadURL
 } from '../utils/firebase.js'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -20,7 +19,6 @@ function slugify(s='') {
     .replace(/-+/g,'-').slice(0,60)
 }
 
-// compresión simple a WEBP si se sube archivo (mejora peso sin tocar servidor)
 async function compressToWebP(file, { maxWidth = 1200, quality = 0.85 } = {}) {
   const img = await new Promise((res, rej) => {
     const i = new Image()
@@ -91,7 +89,7 @@ export default function ProductDetail() {
           local.find(p => slugify(p.name || '') === id.toLowerCase())
         if (foundLocal) {
           setProduct({ id: foundLocal.id || id, ...foundLocal })
-          setProductDocId(null) // viene de json, no editable inline
+          setProductDocId(null)
           return
         }
         setNotFound(true)
@@ -101,7 +99,6 @@ export default function ProductDetail() {
     })()
   }, [id])
 
-  // saneo de campos y defaults
   const safe = useMemo(() => {
     if (!product) return null
     return {
@@ -118,7 +115,7 @@ export default function ProductDetail() {
       abv: product.abv ?? null,
       caseUnits: product.caseUnits ?? product.boxUnits ?? null,
       sku: product.sku || '',
-      stock: Number(product.stock ?? Infinity) // si no hay, no limitamos
+      stock: Number(product.stock ?? Infinity)
     }
   }, [product, id])
 
@@ -141,7 +138,6 @@ export default function ProductDetail() {
     const n = Math.max(1, Number(qty || 1))
     addToCart(safe, n)
     setJustAdded(true)
-    // oculto el contador por la consigna y muestro feedback
     setTimeout(() => setJustAdded(false), 1200)
   }
 
@@ -187,7 +183,6 @@ export default function ProductDetail() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Consigna: ItemCount en detalle, con validaciones por stock, y ocultar tras agregar */}
             {isLogged ? (
               outOfStock ? (
                 <span className="text-red-600">Sin stock</span>
@@ -246,7 +241,7 @@ export default function ProductDetail() {
   )
 }
 
-/* ===== Editor inline para ADMIN ===== */
+/* Editor inline para ADMIN  */
 function toNum(val) {
   const n = Number(val)
   return Number.isFinite(n) ? n : null
@@ -301,10 +296,9 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
         volumeMl: toNum(form.volumeMl),
         abv: toNum(form.abv),
         caseUnits: toNum(form.caseUnits),
-        stock: toNum(form.stock),                 // ← NUEVO: stock
+        stock: toNum(form.stock),              
         img: upload?.url || form.img || '',
       }
-      // saco null/undefined
       Object.keys(updates).forEach(k => {
         if (updates[k] === null || updates[k] === undefined) delete updates[k]
       })

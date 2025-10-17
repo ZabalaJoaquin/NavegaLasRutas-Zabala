@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 :root {
-  /* Paleta inspirada en verde Distrimax. Podés ajustarla a tu logo exacto. */
   --brand: #18191b;        /* principal */
   --brand-dark: #18191b;   /* oscuro */
   --brand-light: #d2f7e9;  /* claro */

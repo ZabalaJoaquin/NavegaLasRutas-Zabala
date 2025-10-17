@@ -1,6 +1,3 @@
-// src/routes/Home.jsx
-// Página principal con hero, buscador, reel de Instagram y productos destacados.
-
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db, collection, getDocs } from '../utils/firebase.js'
@@ -10,7 +7,6 @@ import ProductList from '../components/ProductList.jsx'
 import Brands from '../components/Brands.jsx'
 import logo from '../assets/logo-transparente.png'
 
-/* Imagen con placeholder en caso de error o falta de imagen */
 function ImgPh({ src, alt = '', className = '', rounded = 'rounded-2xl' }) {
   const [error, setError] = useState(false)
   if (!src || error) {
@@ -197,7 +193,7 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-3">
               {/* Reel vertical (ajustado al ancho del mosaico) */}
               <InstagramReel
-                url="https://www.instagram.com/reel/DJkin7NtnR6/"
+                url="https://www.instagram.com/reel/"
                 className="h-full"
               />
 

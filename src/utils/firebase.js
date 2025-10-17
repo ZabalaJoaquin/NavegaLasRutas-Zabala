@@ -51,7 +51,6 @@ export {
   // Firestore
   collection, getDocs, addDoc, doc, getDoc, setDoc,
   updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp,
-  // 👇 nuevos helpers de Firestore que vamos a usar en Checkout
   runTransaction, writeBatch, increment,
 
   // Auth
