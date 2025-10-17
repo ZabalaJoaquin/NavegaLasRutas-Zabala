@@ -14,7 +14,7 @@
 
 ---
 
-🎯 **Deploy:** [https://navega-las-rutas-zabala.vercel.app/](https://distrimax.vercel.app)
+🎯 **Deploy:** [https://navega-las-rutas-zabala.vercel.app/](https://navega-las-rutas-zabala.vercel.app/)
 📦 **Repositorio:** [https://github.com/ZabalaJoaquin/ProyectoFinal-Distrimax](https://github.com/ZabalaJoaquin/ProyectoFinal-Distrimax)
 
 ---
