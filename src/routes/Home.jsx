@@ -1,4 +1,3 @@
-// src/routes/Home.jsx
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { db, collection, getDocs } from '../utils/firebase.js'
@@ -7,6 +6,13 @@ import { useCart } from '../context/CartContext.jsx'
 import ProductList from '../components/ProductList.jsx'
 import Brands from '../components/Brands.jsx'
 import logo from '../assets/logo-transparente.png'
+
+function slugify(s = '') {
+  return s.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-').slice(0, 60)
+}
 
 function ImgPh({ src, alt = '', className = '', rounded = 'rounded-2xl' }) {
   const [error, setError] = useState(false)
@@ -132,10 +138,11 @@ export default function Home() {
     navigate(val ? `/productos?q=${encodeURIComponent(val)}` : '/productos')
   }
 
-  const reelUrl = 'https://www.instagram.com/reel/DJkin7NtnR6/' // cambiá acá si subís otro reel
+  const reelUrl = 'https://www.instagram.com/reel/DJkin7NtnR6/'
 
   return (
-    <section className="relative">
+    <section className="relative overflow-x-hidden">
+      {/* fondo decorativo */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-brand/10 via-transparent to-brand/10" />
         <div className="absolute -top-40 -left-32 w-[26rem] h-[26rem] rounded-full bg-brand/20 blur-3xl" />
@@ -200,6 +207,7 @@ export default function Home() {
 
       <Brands />
 
+      {/* Categorías */}
       <div className="max-w-7xl mx-auto px-6 md:px-8 mt-4">
         <h2 className="text-xl font-semibold mb-3">Explorar por categoría</h2>
         {loading ? (
@@ -210,24 +218,28 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {categories.map(([name, count]) => (
-              <Link
-                key={name}
-                to="/productos"
-                className="group rounded-xl2 border border-surface-hard bg-white p-3 hover:shadow transition"
-                title={`Ver ${name}`}
-              >
-                <div className="text-sm text-neutral-700">{name}</div>
-                <div className="text-xs text-neutral-500">{count} productos</div>
-                <div className="mt-2 text-brand-dark text-xs opacity-0 group-hover:opacity-100 transition">
-                  Ver catálogo →
-                </div>
-              </Link>
-            ))}
+            {categories.map(([name, count]) => {
+              const slug = slugify(name)
+              return (
+                <Link
+                  key={name}
+                  to={`/categoria/${slug}`}
+                  className="group rounded-xl2 border border-surface-hard bg-white p-3 hover:shadow transition"
+                  title={`Ver ${name}`}
+                >
+                  <div className="text-sm text-neutral-700">{name}</div>
+                  <div className="text-xs text-neutral-500">{count} productos</div>
+                  <div className="mt-2 text-brand-dark text-xs opacity-0 group-hover:opacity-100 transition">
+                    Ver catálogo →
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
 
+      {/* Destacados */}
       <div className="max-w-7xl mx-auto px-6 md:px-8 mt-10 mb-14">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Destacados</h2>
@@ -251,6 +263,7 @@ export default function Home() {
         )}
       </div>
 
+      {/* Info inferior */}
       <div className="bg-gradient-to-r from-brand/10 via-transparent to-brand/10">
         <div className="max-w-7xl mx-auto px-6 md:px-8 py-10 grid md:grid-cols-3 gap-4">
           <div className="rounded-xl2 border border-surface-hard bg-white p-4">

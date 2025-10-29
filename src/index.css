@@ -18,3 +18,20 @@ html, body {
 
 .glass { background: rgba(255,255,255,.7); backdrop-filter: blur(8px); }
 .ring-brand { box-shadow: 0 0 0 6px rgba(10,143,91,.12); }
+
+/* Evitar scroll horizontal global */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Instagram mete un min-width que puede romper layout */
+.instagram-media,
+.instagram-media * {
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Si algún contenedor tiene overflow extra, forzamos borde seguro */
+#root, main {
+  overflow-x: hidden;
+}

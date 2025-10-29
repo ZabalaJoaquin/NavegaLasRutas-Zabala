@@ -1,3 +1,4 @@
+// src/routes/ProductDetail.jsx
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
@@ -11,14 +12,14 @@ import QuantitySelector from '../components/QuantitySelector.jsx'
 import ProductSpecs from '../components/ProductSpecs.jsx'
 import RelatedProducts from '../components/RelatedProducts.jsx'
 
-// slug para buscar por nombre si el id es un slug
-function slugify(s='') {
+function slugify(s = '') {
   return s.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
-    .replace(/-+/g,'-').slice(0,60)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-').slice(0, 60)
 }
 
+// compresión simple a WEBP si se sube archivo en el editor admin
 async function compressToWebP(file, { maxWidth = 1200, quality = 0.85 } = {}) {
   const img = await new Promise((res, rej) => {
     const i = new Image()
@@ -43,12 +44,12 @@ export default function ProductDetail() {
   const { addToCart } = useCart()
 
   const [product, setProduct] = useState(null)
-  const [productDocId, setProductDocId] = useState(null)   // id real del doc en Firestore
+  const [productDocId, setProductDocId] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [qty, setQty] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
 
-  // cargo el producto (Firestore -> slug -> JSON local)
+  // carga producto (Firestore -> por slug -> JSON local)
   useEffect(() => {
     window.scrollTo(0, 0)
     setNotFound(false)
@@ -59,14 +60,12 @@ export default function ProductDetail() {
 
     ;(async () => {
       try {
-        // 1) por id exacto
         const snap = await getDoc(doc(db, 'products', id))
         if (snap.exists()) {
           setProduct({ id: snap.id, ...snap.data() })
           setProductDocId(snap.id)
           return
         }
-        // 2) por slug de nombre en Firestore
         try {
           const qs = await getDocs(collection(db, 'products'))
           let found = null
@@ -82,7 +81,6 @@ export default function ProductDetail() {
             return
           }
         } catch {}
-        // 3) fallback JSON local
         const local = (await import('../data/products.json')).default
         const foundLocal =
           local.find(p => (p.id || '').toLowerCase() === id.toLowerCase()) ||
@@ -120,7 +118,10 @@ export default function ProductDetail() {
   }, [product, id])
 
   const price = useMemo(() => Number(safe?.price ?? 0), [safe])
-  const outOfStock = useMemo(() => Number.isFinite(safe?.stock) && safe.stock <= 0, [safe])
+  const outOfStock = useMemo(
+    () => Number.isFinite(safe?.stock) && safe.stock <= 0,
+    [safe]
+  )
 
   if (notFound) {
     return (
@@ -131,9 +132,10 @@ export default function ProductDetail() {
     )
   }
 
-  if (!safe) return <section className="max-w-6xl mx-auto px-4 py-10">Cargando...</section>
+  if (!safe) {
+    return <section className="max-w-6xl mx-auto px-4 py-10">Cargando...</section>
+  }
 
-  // agregar al carrito con la cantidad seleccionada
   function handleAdd() {
     const n = Math.max(1, Number(qty || 1))
     addToCart(safe, n)
@@ -144,7 +146,7 @@ export default function ProductDetail() {
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Columna imagen */}
+        {/* Imagen */}
         <div>
           <img
             src={safe.img}
@@ -164,7 +166,7 @@ export default function ProductDetail() {
           )}
         </div>
 
-        {/* Columna info */}
+        {/* Info */}
         <div>
           <h1 className="text-3xl font-bold">{safe.name}</h1>
           {safe.brand && <div className="text-neutral-600 mt-1">{safe.brand}</div>}
@@ -182,6 +184,7 @@ export default function ProductDetail() {
             )}
           </div>
 
+          {/* Acciones: oculto selector tras agregar */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {isLogged ? (
               outOfStock ? (
@@ -192,19 +195,26 @@ export default function ProductDetail() {
                   <Link to="/carrito" className="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold">
                     Ir al carrito
                   </Link>
+                  <Link to="/productos" className="px-5 py-2 rounded-xl2 border border-surface-hard">
+                    Seguir comprando
+                  </Link>
                 </>
               ) : (
                 <>
                   <QuantitySelector
                     value={qty}
-                    onChange={(v) => setQty(Math.max(1, Math.min(Number(v || 1), safe.stock || Infinity)))}
+                    onChange={(v) => {
+                      const n = Number(v || 1)
+                      const max = Number.isFinite(safe.stock) ? safe.stock : Infinity
+                      setQty(Math.max(1, Math.min(n, max)))
+                    }}
                     min={1}
                     max={Number.isFinite(safe.stock) ? safe.stock : undefined}
                   />
                   <button
                     className="px-5 py-2 rounded-xl2 bg-brand text-white font-semibold"
                     onClick={handleAdd}
-                    disabled={Number.isFinite(safe.stock) && qty > safe.stock}
+                    disabled={outOfStock || (Number.isFinite(safe.stock) && qty > safe.stock)}
                   >
                     Agregar al carrito
                   </button>
@@ -229,7 +239,7 @@ export default function ProductDetail() {
       {/* Relacionados */}
       <RelatedProducts currentId={safe.id} category={safe.category} />
 
-      {/* Edición inline (solo admin y si es un doc real de Firestore) */}
+      {/* Editor inline (admin) */}
       {isAdmin && productDocId && (
         <AdminInlineEditor
           initial={safe}
@@ -241,7 +251,7 @@ export default function ProductDetail() {
   )
 }
 
-/* Editor inline para ADMIN  */
+/* ====== Editor inline para ADMIN ====== */
 function toNum(val) {
   const n = Number(val)
   return Number.isFinite(n) ? n : null
@@ -255,9 +265,7 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
-  useEffect(() => {
-    setForm(initial)
-  }, [initial])
+  useEffect(() => { setForm(initial) }, [initial])
 
   async function uploadIfAny() {
     if (!file || !storage) return null
@@ -296,7 +304,7 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
         volumeMl: toNum(form.volumeMl),
         abv: toNum(form.abv),
         caseUnits: toNum(form.caseUnits),
-        stock: toNum(form.stock),              
+        stock: toNum(form.stock),
         img: upload?.url || form.img || '',
       }
       Object.keys(updates).forEach(k => {
@@ -396,6 +404,9 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
             <label className="text-sm text-neutral-600">Stock</label>
             <input type="number" className="w-full border rounded-xl2 px-3 py-2"
                    value={form.stock ?? ''} onChange={e=>setForm(v=>({...v,stock:e.target.value}))} />
+            <p className="text-[11px] text-neutral-500 mt-1">
+              Dejar vacío para “stock infinito”.
+            </p>
           </div>
 
           <div className="md:col-span-2">
@@ -404,10 +415,9 @@ function AdminInlineEditor({ initial, docId, onUpdated }) {
                    value={form.img ?? ''} onChange={e=>setForm(v=>({...v,img:e.target.value}))} />
           </div>
 
-          <div className="md:col-span-1">
+          <div>
             <label className="text-sm text-neutral-600">o subir archivo</label>
-            <input type="file" accept="image/*"
-                   onChange={(e)=>setFile(e.target.files?.[0] || null)} />
+            <input type="file" accept="image/*" onChange={(e)=>setFile(e.target.files?.[0] || null)} />
             {file && busy && progress > 0 && (
               <div className="text-xs mt-1">{progress}%</div>
             )}

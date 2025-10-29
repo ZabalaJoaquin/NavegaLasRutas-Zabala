@@ -1,60 +1,74 @@
 // src/routes/Productos.jsx
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { db, collection, getDocs } from '../utils/firebase.js'
 import ProductCard from '../components/ProductCard.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
 
-const norm = (s='') =>
-  s.toString().toLowerCase().trim()
+function slugify(s=''){
+  return s.toLowerCase().trim()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-
-const slugify = (s='') =>
-  norm(s).replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').slice(0,60)
-
-const listKey = (p,i) => `${p.id || p.routeKey || p.sku || slugify(p.name || 'producto')}-${i}`
-
-function expandQuery(q='') {
+    .replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
+    .replace(/-+/g,'-').slice(0,60)
+}
+function norm(s=''){
+  return s.toString().toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+}
+function getStableId(p, i){
+  const base = p.id || p.routeKey || p.sku || (p.name ? slugify(p.name) : 'producto')
+  return `${base}-${i}`
+}
+function expandQuery(q=''){
   const x = norm(q)
   const tokens = x.split(/\s+/).filter(Boolean)
   const out = new Set(tokens)
   tokens.forEach(t => {
     if (['whiski','wiski','whiskey'].includes(t)) out.add('whisky')
-    if (t === 'vinos') out.add('vino')
-    if (['champagne','espumante','espumantes'].includes(t)) out.add('champagne')
-    if (t === 'rhum') out.add('ron')
-    if (['energizantes','energy'].includes(t)) out.add('energizante')
+    if (t === 'vino' || t === 'vinos') out.add('vino')
+    if (t === 'champagne' || t === 'espumante' || t === 'espumantes') out.add('champagne')
+    if (t === 'ron' || t === 'rhum') out.add('ron')
+    if (t === 'fernet') out.add('fernet')
+    if (t === 'energizante' || t === 'energizantes' || t === 'energy') out.add('energizante')
   })
   return Array.from(out)
+}
+// slug para categoría (mismo criterio que Home)
+function catSlug(s=''){
+  return s.toString().toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')
+    .replace(/-+/g,'-')
 }
 
 export default function Productos() {
   const { user } = useAuth()
   const { addToCart } = useCart()
   const location = useLocation()
-  const navigate = useNavigate()
+  const { slug } = useParams() || {}
 
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('todas')
 
-  // lee ?q= al entrar (desde Home)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const initialQ = params.get('q') || ''
     if (initialQ) setQ(initialQ)
   }, [location.search])
 
-  // carga productos (Firestore -> JSON local)
   useEffect(() => {
     (async () => {
       setLoading(true)
       try {
         const qs = await getDocs(collection(db, 'products'))
         const arr = []
-        qs.forEach(d => arr.push({ id: d.id, routeKey: d.id, ...d.data() }))
+        qs.forEach(d => {
+          const data = d.data()
+          arr.push({ id: d.id, routeKey: d.id, ...data })
+        })
         if (arr.length) { setAll(arr); return }
         const local = (await import('../data/products.json')).default
         setAll(local.map(p => {
@@ -73,23 +87,29 @@ export default function Productos() {
     })()
   }, [])
 
-  // categorias únicas + orden preferente
+  // armo categorías y su slug para linkear/matchear
   const categories = useMemo(() => {
     const set = new Set()
-    all.forEach(p => set.add((p.category || 'Sin categoría').toString().trim() || 'Sin categoría'))
-    const base = Array.from(set)
+    all.forEach(p => set.add((p.category || '').toString().trim() || 'Sin categoría'))
+    const arr = Array.from(set)
     const prefer = ['Vinos','Whisky','Fernet','Champagne','Ron','Energizante']
-    base.sort((a,b) => {
-      const ia = prefer.indexOf(a), ib = prefer.indexOf(b)
+    arr.sort((a,b) => {
+      const ia = prefer.indexOf(a); const ib = prefer.indexOf(b)
       if (ia !== -1 && ib !== -1) return ia - ib
       if (ia !== -1) return -1
       if (ib !== -1) return 1
       return a.localeCompare(b,'es')
     })
-    return base
+    return arr
   }, [all])
 
-  // filtro texto + categoría
+  // si viene /categoria/:slug, seteo categoría inicial por slug
+  useEffect(() => {
+    if (!slug || !categories.length) return
+    const match = categories.find(c => catSlug(c) === slug)
+    if (match) setCat(match)
+  }, [slug, categories])
+
   const filtered = useMemo(() => {
     const tokens = expandQuery(q)
     return all.filter(p => {
@@ -103,7 +123,6 @@ export default function Productos() {
     })
   }, [all, q, cat])
 
-  // agrupado por categoría
   const grouped = useMemo(() => {
     const map = new Map()
     filtered.forEach(p => {
@@ -111,30 +130,19 @@ export default function Productos() {
       if (!map.has(c)) map.set(c, [])
       map.get(c).push(p)
     })
-    for (const arr of map.values()) arr.sort((a,b)=> (a.name||'').localeCompare(b.name||'','es'))
+    for (const [, arr] of map) arr.sort((a,b)=> (a.name||'').localeCompare(b.name||'','es'))
     const order = cat === 'todas' ? categories : [cat]
     return order.filter(c => map.has(c)).map(c => ({ category: c, items: map.get(c) }))
   }, [filtered, categories, cat])
 
-  // sincroniza ?q= en la URL (UX linda al compartir búsqueda)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const current = params.get('q') || ''
-    if (q.trim() !== current) {
-      if (q.trim()) params.set('q', q.trim()); else params.delete('q')
-      navigate({ search: params.toString() }, { replace: true })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q])
-
   return (
-    <section className="max-w-7xl mx-auto px-6 md:px-8 py-10">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">Productos</h1>
-        <div className="text-sm text-neutral-600">{filtered.length} resultados</div>
-      </div>
+    <section className="max-w-6xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold mb-4">
+        {slug ? `Categoría: ${cat}` : 'Productos'}
+      </h1>
 
-      <div className="mb-6 grid md:grid-cols-3 gap-3">
+      {/* filtros */}
+      <div className="mb-5 grid md:grid-cols-3 gap-3">
         <div className="md:col-span-2">
           <input
             className="w-full border border-surface-hard rounded-xl2 px-3 py-2"
@@ -155,33 +163,35 @@ export default function Productos() {
         </div>
       </div>
 
-      {!user && <div className="mb-4 text-sm text-neutral-600">Iniciá sesión para ver precios.</div>}
+      {!user && (
+        <div className="mb-4 text-sm text-neutral-600">
+          Iniciá sesión para ver precios.
+        </div>
+      )}
 
       {loading ? (
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_,i)=>(
-            <div key={i} className="h-64 rounded-xl2 border border-surface-hard bg-white">
-              <div className="h-full w-full animate-pulse bg-surface-soft rounded-xl2" />
-            </div>
-          ))}
-        </div>
+        <div>Cargando…</div>
       ) : grouped.length === 0 ? (
         <div className="text-neutral-600">No encontramos productos que coincidan con tu búsqueda.</div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {grouped.map(({ category, items }) => (
-            <section key={category}>
+            <div key={category}>
               <h2 className="text-xl font-semibold mb-3">{category}</h2>
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {items.map((p, i) => (
-                  <ProductCard
-                    key={listKey(p, i)}
-                    product={p}          // ⇒ preserva p.id original para stock/checkout
-                    onAdd={addToCart}
-                  />
-                ))}
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {items.map((p, i) => {
+                  const stableId = getStableId(p, i)
+                  const product = { id: stableId, ...p }
+                  return (
+                    <ProductCard
+                      key={stableId}
+                      product={product}
+                      onAdd={addToCart}
+                    />
+                  )
+                })}
               </div>
-            </section>
+            </div>
           ))}
         </div>
       )}
