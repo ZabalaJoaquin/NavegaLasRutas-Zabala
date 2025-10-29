@@ -13,7 +13,7 @@
 
 # Proyecto Final — E-commerce con React (Distrimax)
 
-> **Lectura rápida para la corrección.** Es una Single Page Application (SPA) de e-commerce pensada para la entrega final del curso. Permite navegar el catálogo, ver detalle, armar carrito y completar el checkout con persistencia en **Firebase/Firestore**.
+> Es una Single Page Application (SPA) de e-commerce pensada para la entrega final del curso. Permite navegar el catálogo, ver detalle, armar carrito y completar el checkout con persistencia en **Firebase/Firestore**.
 
 ---
 
@@ -103,7 +103,7 @@ npm run dev
 - **orders**: buyer {name, email, phone}, items [{id, title, price, quantity}], total, date, status.
 - **users**: { email, displayName, role: 'admin' | 'user' }.
 
-**Reglas (idea simple para la entrega)**
+**Reglas**
 - `products`: lectura pública; escritura sólo admin.
 - `orders`: cualquiera crea; cada usuario lee sus órdenes; admin ve todas.
 - `users`: admin gestiona roles.
@@ -115,27 +115,14 @@ npm run dev
 **Administrador**
 - **Email**: `distrimax.alvear@gmail.com`
 - **Contraseña**: `admin123`
-**Cómo ingresar**: 1) Clic en **Ingresar** → 2) Completar credenciales → 3) Entrar al **Panel de administrador** para gestionar productos y pedidos.
+- **Cómo ingresar**: 1) Clic en **Ingresar** → 2) Completar credenciales → 3) Entrar al **Panel de administrador** para gestionar productos y pedidos.
 
 **Usuario**
 - **Email**: `prueba@gmail.com`
 - **Contraseña**: `prueba123`
-**Qué puede hacer**: ver precios, agregar productos al carrito y realizar una **pre-compra**. **No** tiene acceso al panel admin.
+- **Qué puede hacer**: ver precios, agregar productos al carrito y realizar una **pre-compra**. **No** tiene acceso al panel admin.
 
 *Nota*: Los roles se resuelven leyendo `users/{uid}` en Firestore tras el login.
-
-## Capturas y GIFs (placeholders)
-> Dejo rutas sugeridas en `docs/` para subir antes de la entrega. Si no existen, GitHub mostrará los alt.
-
-- **GIF — Login Admin:** `docs/gif-admin-login.gif`
-- **GIF — Flujo de compra:** `docs/gif-flujo-compra.gif`
-- **Catálogo:** `docs/cap-catalogo.png`
-- **Detalle:** `docs/cap-detalle.png`
-- **Carrito:** `docs/cap-carrito.png`
-- **Checkout (ID de orden):** `docs/cap-checkout.png`
-- **Panel Admin:** `docs/cap-admin.png`
-
-> Sugerencia rápida: grabar con *ScreenToGif* o *OBS*, exportar como .gif y subir a `/docs`.
 
 ---
 
@@ -156,7 +143,7 @@ npm run dev
 
 ## Deploy
 Deploy en **Vercel**: https://navega-las-rutas-zabala.vercel.app/  
-Variables `VITE_*` definidas en el panel del proveedor.
+Variables `VITE_*` definidas.
 
 ---
 
